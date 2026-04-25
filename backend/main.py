@@ -1,11 +1,12 @@
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Body
 from fastapi.middleware.cors import CORSMiddleware
 import requests
 import traceback
 from datetime import datetime
 import os
 
-AGENT_URL = os.getenv("AGENT_URL")  # instead of hardcoded
+AGENT_URL = os.getenv("AGENT_URL")
+
 app = FastAPI()
 
 # 🔹 CORS
@@ -18,24 +19,25 @@ app.add_middleware(
 )
 
 
-
 # 🧠 Send structured log
 def send_log(data: dict):
     if not AGENT_URL:
-        return  # skip if not configured
+        print("⚠️ AGENT_URL not set, skipping log")
+        return
 
     try:
+        print("📤 Sending log to agent...")
         requests.post(AGENT_URL, json=data, timeout=2)
     except Exception as e:
-        print("Log send failed:", e)
+        print("❌ Log send failed:", e)
 
-# 🔥 MIDDLEWARE
+
+# 🔥 MIDDLEWARE (FIXED)
 @app.middleware("http")
 async def log_errors(request: Request, call_next):
     try:
         response = await call_next(request)
 
-        # Capture HTTP errors
         if response.status_code >= 400:
             log_data = {
                 "message": f"HTTP {response.status_code} error",
@@ -45,14 +47,15 @@ async def log_errors(request: Request, call_next):
                 "timestamp": datetime.utcnow().isoformat(),
                 "service": "todo-backend"
             }
+
+            print("🔥 HTTP error detected")
             send_log(log_data)
 
         return response
 
     except Exception as e:
-        # Capture runtime errors
         log_data = {
-            "message": str(e),
+            "message": f"{type(e).__name__}: {str(e)}",
             "error_type": type(e).__name__,
             "endpoint": request.url.path,
             "method": request.method,
@@ -61,7 +64,9 @@ async def log_errors(request: Request, call_next):
             "stack_trace": traceback.format_exc()
         }
 
+        print("🔥 Runtime exception detected")
         send_log(log_data)
+
         raise e
 
 
@@ -92,10 +97,14 @@ def index_error():
     arr = [1, 2, 3]
     return arr[10]
 
+
+# 🔥 FIXED TODOS ROUTE
 @app.post("/todos")
-def add_todo(data: dict):
+async def add_todo(data: dict = Body(...)):
 
     title = data.get("title", "")
+
+    print("📥 Received todo:", title)
 
     # 🔥 DB Errors
     if title == "db_fail":
@@ -111,18 +120,17 @@ def add_todo(data: dict):
     if len(title) > 20:
         raise ValueError("ValidationError: title too long")
 
-    # 🔥 Type Error simulation
+    # 🔥 Type Error
     if title == "type":
         x = "string" + 10
 
-    # 🔥 Key Error simulation
+    # 🔥 Key Error
     if title == "key":
         obj = {"name": "todo"}
         return obj["missing"]
 
     # 🔥 External API failure
     if title == "api":
-        import requests
         requests.get("https://invalid-api.example.com", timeout=1)
 
-    return {"status": "todo added"} 
+    return {"status": "todo added"}
