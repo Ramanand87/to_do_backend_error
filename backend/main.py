@@ -3,7 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 import requests
 import traceback
 from datetime import datetime
+import os
 
+AGENT_URL = os.getenv("AGENT_URL")  # instead of hardcoded
 app = FastAPI()
 
 # 🔹 CORS
@@ -15,16 +17,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-AGENT_URL = "http://127.0.0.1:8000/log"
 
 
 # 🧠 Send structured log
 def send_log(data: dict):
+    if not AGENT_URL:
+        return  # skip if not configured
+
     try:
         requests.post(AGENT_URL, json=data, timeout=2)
     except Exception as e:
         print("Log send failed:", e)
-
 
 # 🔥 MIDDLEWARE
 @app.middleware("http")
