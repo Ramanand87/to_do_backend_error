@@ -27,7 +27,7 @@ def send_log(data: dict):
 
     try:
         print("📤 Sending log to agent...")
-        requests.post(AGENT_URL, json=data, timeout=2)
+        requests.post(AGENT_URL, json=data, timeout=10)
     except Exception as e:
         print("❌ Log send failed:", e)
 
