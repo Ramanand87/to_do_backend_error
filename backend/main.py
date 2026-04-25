@@ -44,7 +44,7 @@ async def log_errors(request: Request, call_next):
     try:
         response = await call_next(request)
 
-        if response.status_code >= 400:
+        if request.method != "HEAD" and response.status_code >= 400:
             log_data = {
                 "message": f"HTTP {response.status_code} error",
                 "error_type": "HTTPError",
@@ -60,6 +60,8 @@ async def log_errors(request: Request, call_next):
         return response
 
     except Exception as e:
+        print("🔥 Runtime exception detected:", e)
+
         log_data = {
             "message": f"{type(e).__name__}: {str(e)}",
             "error_type": type(e).__name__,
@@ -70,11 +72,13 @@ async def log_errors(request: Request, call_next):
             "stack_trace": traceback.format_exc()
         }
 
-        print("🔥 Runtime exception detected")
         send_log(log_data)
 
-        raise e
-
+        # ✅ DO NOT raise
+        return JSONResponse(
+            status_code=500,
+            content={"detail": str(e)}
+        )
 
 # 🟢 Normal route
 @app.get("/")
