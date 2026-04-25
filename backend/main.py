@@ -22,12 +22,18 @@ app.add_middleware(
 # 🧠 Send structured log
 def send_log(data: dict):
     if not AGENT_URL:
-        print("⚠️ AGENT_URL not set, skipping log")
+        print("❌ AGENT_URL not set")
         return
 
     try:
-        print("📤 Sending log to agent...")
-        requests.post(AGENT_URL, json=data, timeout=10)
+        print("📡 Sending request to:", AGENT_URL)
+
+        res = requests.post(AGENT_URL, json=data, timeout=10)
+
+        print("✅ Agent responded!")
+        print("Status:", res.status_code)
+        print("Body:", res.text)
+
     except Exception as e:
         print("❌ Log send failed:", e)
 
