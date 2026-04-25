@@ -26,7 +26,7 @@ def send_log(data: dict):
         return
 
     try:
-        print("📡 Sending request to:", AGENT_URL)
+        print("📡 Sending request to:", AGENT_URL,flush=True)
 
         res = requests.post(AGENT_URL, json=data, timeout=10)
 
